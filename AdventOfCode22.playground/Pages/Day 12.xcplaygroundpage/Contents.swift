@@ -10,6 +10,7 @@ import Foundation
 let inputData = try String(contentsOf: Bundle.main.url(forResource: "Input", withExtension: "txt")!)
 
 typealias Point = (x: Int, y: Int)
+typealias Path = [Point]
 
 struct HeightMap {
     
@@ -20,9 +21,9 @@ struct HeightMap {
     init(textRepresentation: String) {
         let lines = textRepresentation.components(separatedBy: "\n").filter({ !$0.isEmpty })
         var map: [[Position]] = []
-        for (x, line) in lines.enumerated() {
+        for (y, line) in lines.enumerated() {
             var mapRow: [Position] = []
-            for (y, char) in line.enumerated() {
+            for (x, char) in line.enumerated() {
                 let position = Position(rawValue: char)!
                 switch position {
                 case .S:
@@ -100,6 +101,79 @@ struct HeightMap {
             }
         }
     }
+    
+    enum Direction: Hashable, CaseIterable, CustomStringConvertible {
+        case up, down, left, right
+        
+        var delta: Point {
+            switch self {
+            case .up:
+                return (0,-1)
+            case .down:
+                return (0,1)
+            case .left:
+                return (-1,0)
+            case .right:
+                return (1,0)
+            }
+        }
+        
+        var description: String {
+            switch self {
+            case .up:
+                return "up"
+            case .down:
+                return "down"
+            case .left:
+                return "left"
+            case .right:
+                return "right"
+            }
+        }
+    }
+    
+    func movesAtPosition(_ position: Point) -> [Direction: Int] {
+        let maxY = map.count
+        let maxX = map[0].count
+        return Direction.allCases.reduce(into: [:], { partialResult, direction in
+            let nextPosition: Point = (position.x + direction.delta.x, position.y + direction.delta.y)
+            if (nextPosition.x < maxX && nextPosition.x >= 0) &&
+               (nextPosition.y < maxY && nextPosition.y >= 0)
+            {
+                partialResult[direction] = map[nextPosition.y][nextPosition.x].heightValue
+            }
+        })
+    }
+    
+    func pathFromStartToEnd() -> Path {
+        var currentPoint = endPoint
+        
+        // How do we loop?
+        var moves = movesAtPosition(currentPoint)
+        while !moves.isEmpty {
+            print("At \(currentPoint), we can move \(moves.debugDescription)")
+            let currentPosition = map[currentPoint.y][currentPoint.x]
+            if currentPosition == .E {
+                break
+            }
+            for direction in Direction.allCases {
+                if let moveHeight = moves[direction] {
+                    if moveHeight == currentPosition.heightValue - 1 {
+                        // Move this way
+                        currentPoint = (currentPoint.x + direction.delta.x, currentPoint.y + direction.delta.y)
+                        break
+                    }
+                    
+                    
+                }
+            }
+            moves = movesAtPosition(currentPoint)
+            
+        }
+        
+        
+        return []
+    }
 }
 
 let heightMap = HeightMap(textRepresentation: inputData)
@@ -107,6 +181,13 @@ let heightMap = HeightMap(textRepresentation: inputData)
 print("Start \(heightMap.startPoint)")
 print("End \(heightMap.endPoint)")
 
-for row in heightMap.map {
-    print(row.map({ $0.heightValue }))
-}
+//for row in heightMap.map {
+//    print(row.map({ $0.heightValue }))
+//}
+
+print("-------")
+
+let path = heightMap.pathFromStartToEnd()
+
+// How do we know we are going the right way? want a number that is one bigger!
+// bias is for down?
